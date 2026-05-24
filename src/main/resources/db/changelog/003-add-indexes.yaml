@@ -1,0 +1,18 @@
+databaseChangeLog:
+  - changeSet:
+      id: 3
+      author: danworldman
+      changes:
+        - createIndex:
+            indexName: idx_users_credentials_username
+            tableName: users_credentials
+            unique: true
+            columns:
+              - column:
+                  name: username
+        - createIndex:
+            indexName: idx_refresh_tokens_user_id
+            tableName: refresh_tokens
+            columns:
+              - column:
+                  name: user_id

@@ -1,0 +1,33 @@
+services:
+  app:
+    container_name: auth-service
+    build: .
+    ports:
+      - "8080:8080"
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://db:5432/auth_db
+      - SPRING_DATASOURCE_USERNAME=danworldman
+      - SPRING_DATASOURCE_PASSWORD=auth
+    depends_on:
+      db:
+        condition: service_healthy
+
+  db:
+    container_name: auth-db
+    image: postgres:17
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_DB=auth_db
+      - POSTGRES_USER=danworldman
+      - POSTGRES_PASSWORD=auth
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U danworldman -d auth_db" ]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+volumes:
+  db-data:
