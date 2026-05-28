@@ -12,6 +12,8 @@ public interface AuthService {
 
     UserResponse registration(RegistrationRequest request);
 
+    void rollbackCredentials(Long userServiceId);
+
     TokenResponse authentication(AuthenticationRequest request);
 
     TokenResponse refreshToken(RefreshTokenRequest refreshToken);

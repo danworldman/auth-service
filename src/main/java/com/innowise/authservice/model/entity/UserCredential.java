@@ -47,6 +47,9 @@ public class UserCredential {
     @Column(name = "active", nullable = false)
     private boolean isActive;
 
+    @Column(name = "user_service_id")
+    private Long userServiceId;
+
     @CreatedDate
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
@@ -56,10 +59,10 @@ public class UserCredential {
     private LocalDateTime updatedAt;
 
     @OneToMany(mappedBy = "userCredential", cascade = CascadeType.ALL, orphanRemoval = true)
-    List<RefreshToken> refreshTokens = new ArrayList<>();
+    private List<RefreshToken> refreshTokens = new ArrayList<>();
 
     @Override
-    public final boolean equals(Object o) {
+    public boolean equals(Object o) {
         if (this == o) {
             return true;
         }
@@ -72,7 +75,7 @@ public class UserCredential {
     }
 
     @Override
-    public final int hashCode() {
+    public int hashCode() {
         return Objects.hash(getUsername());
     }
 }

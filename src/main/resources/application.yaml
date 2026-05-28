@@ -1,17 +1,18 @@
 spring:
   application:
     name: auth-service
-  datasource:
-    url: ${DB_URL:jdbc:postgresql://localhost:5432/auth_db}
-    username: ${DB_USERNAME:postgres}
-    password: ${DB_PASSWORD:postgres}
-    driver-class-name: org.postgresql.Driver
-  liquibase:
-    enabled: true
-    change-log: db/changelog/db.changelog-master.yaml
   jpa:
     hibernate:
       ddl-auto: none
+    open-in-view: false
+  liquibase:
+    change-log: classpath:db/changelog/db.changelog-master.yaml
+  profiles:
+    active: local
+
+server:
+  port: 8081
+
 jwt:
   secret: ${JWT_SECRET:mySuperSecretKeyForJwtThatIsAtLeast32CharactersLong}
   access-expiration: 900000

@@ -34,14 +34,21 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) {
         http.csrf(AbstractHttpConfigurer::disable)
-                .sessionManagement(session -> session
-                        .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
-                ).authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/auth/register", "/auth/login", "/auth/refresh", "/auth/validate")
-                        .permitAll()
-                        .anyRequest()
-                        .authenticated()
-                ).addFilterBefore(jwtRequestFilter, UsernamePasswordAuthenticationFilter.class);
+                .sessionManagement(session -> {
+                    session.sessionCreationPolicy(SessionCreationPolicy.STATELESS);
+                })
+                .authorizeHttpRequests(auth -> {
+                    auth.requestMatchers(
+                                    "/api/v1/auth/register",
+                                    "/api/v1/auth/login",
+                                    "/api/v1/auth/refresh",
+                                    "/api/v1/auth/validate",
+                                    "/api/v1/auth/rollback/**"
+                            ).permitAll()
+                            .anyRequest()
+                            .authenticated();
+                })
+                .addFilterBefore(jwtRequestFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
     }
