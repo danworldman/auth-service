@@ -53,11 +53,11 @@ public class RefreshToken {
     private UserCredential userCredential;
 
     @Override
-    public final boolean equals(Object o){
-        if(this == o){
+    public final boolean equals(Object o) {
+        if (this == o) {
             return true;
         }
-        if (o == null || getClass() != o.getClass()){
+        if (o == null || getClass() != o.getClass()) {
             return false;
         }
 
@@ -66,7 +66,7 @@ public class RefreshToken {
     }
 
     @Override
-    public final int hashCode(){
+    public final int hashCode() {
         return Objects.hash(getToken());
     }
 }
