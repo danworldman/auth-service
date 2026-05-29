@@ -66,12 +66,18 @@ public class UserCredential {
         if (this == o) {
             return true;
         }
+
         if (o == null || getClass() != o.getClass()) {
             return false;
         }
 
         UserCredential userCredential = (UserCredential) o;
-        return getUsername() != null && getUsername().equals(userCredential.getUsername());
+
+        if (getUsername() == null || userCredential.getUsername() == null) {
+            return false;
+        }
+
+        return getUsername().equals(userCredential.getUsername());
     }
 
     @Override

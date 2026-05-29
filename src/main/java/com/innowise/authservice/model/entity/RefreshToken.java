@@ -57,11 +57,17 @@ public class RefreshToken {
         if (this == o) {
             return true;
         }
+
         if (o == null || getClass() != o.getClass()) {
             return false;
         }
 
         RefreshToken refreshToken = (RefreshToken) o;
+
+        if (getToken() == null || refreshToken.getToken() == null) {
+            return false;
+        }
+
         return getToken().equals(refreshToken.getToken());
     }
 

@@ -19,6 +19,7 @@ import org.springframework.web.client.RestTemplate;
 import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 class AuthControllerIntegrationTest extends BaseIntegrationTest {
 
@@ -82,6 +83,42 @@ class AuthControllerIntegrationTest extends BaseIntegrationTest {
     }
 
     @Test
+    void register_shouldReturnBadRequest_whenRoleIsInvalid() {
+        Map<String, String> invalidRequest = Map.of(
+                "userServiceId", "200",
+                "username", "validUser",
+                "role", "INVALID_ROLE",
+                "password", "pass"
+        );
+
+        ResponseEntity<ProblemDetail> response = clientRestTemplate.postForEntity(
+                baseUrl() + "/register", invalidRequest, ProblemDetail.class
+        );
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+        assertThat(response.getBody()).isNotNull();
+        assertThat(response.getBody().getDetail()).contains("Validation failed");
+    }
+
+    @Test
+    void register_shouldReturnBadRequest_whenUnexpectedDeserializationExceptionOccurs() {
+        Map<String, Object> corruptedPayload = Map.of(
+                "userServiceId", "not-a-number-causes-error",
+                "username", "user",
+                "role", "USER",
+                "password", "pass"
+        );
+
+        ResponseEntity<ProblemDetail> response = clientRestTemplate.postForEntity(
+                baseUrl() + "/register", corruptedPayload, ProblemDetail.class
+        );
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+        assertThat(response.getBody()).isNotNull();
+    }
+
+
+    @Test
     void login_shouldReturnTokensWhenCredentialsValid() {
         RegistrationRequest regRequest = defaultRegistrationRequest("loginUser", "USER", "pass");
         clientRestTemplate.postForEntity(baseUrl() + "/register", regRequest, UserResponse.class);
@@ -120,6 +157,7 @@ class AuthControllerIntegrationTest extends BaseIntegrationTest {
                 baseUrl() + "/login", loginRequest, TokenResponse.class
         ).getBody();
 
+        assertNotNull(tokens);
         Map<String, String> validateRequest = tokenRequest(tokens.accessToken());
         ResponseEntity<ValidateResponse> validateResponse = clientRestTemplate.postForEntity(
                 baseUrl() + "/validate", validateRequest, ValidateResponse.class
@@ -154,6 +192,7 @@ class AuthControllerIntegrationTest extends BaseIntegrationTest {
                 baseUrl() + "/login", loginRequest, TokenResponse.class
         ).getBody();
 
+        assertNotNull(tokens);
         Map<String, String> refreshRequest = refreshRequest(tokens.refreshToken());
         ResponseEntity<TokenResponse> refreshResponse = clientRestTemplate.postForEntity(
                 baseUrl() + "/refresh", refreshRequest, TokenResponse.class
@@ -212,6 +251,15 @@ class AuthControllerIntegrationTest extends BaseIntegrationTest {
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
         assertThat(response.getBody()).isNotNull();
         assertThat(response.getBody().getDetail()).contains("User credentials not found");
+    }
+
+    @Test
+    void anyEndpoint_shouldReturnForbidden_whenHandlerDoesNotExistWithoutToken() {
+        ResponseEntity<Void> response = clientRestTemplate.getForEntity(
+                baseUrl() + "/non-existent-endpoint", Void.class
+        );
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
     }
 
     private RegistrationRequest registrationRequest(Long userServiceId, String username, String role, String password) {
