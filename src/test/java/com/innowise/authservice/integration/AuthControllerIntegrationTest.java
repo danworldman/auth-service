@@ -71,6 +71,17 @@ class AuthControllerIntegrationTest extends BaseIntegrationTest {
     }
 
     @Test
+    void register_shouldReturnBadRequest_whenUsernameIsEmpty() {
+        RegistrationRequest request = registrationRequest(100L, "", "USER", "pass");
+
+        ResponseEntity<ProblemDetail> response = clientRestTemplate.postForEntity(
+                baseUrl() + "/register", request, ProblemDetail.class
+        );
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+    }
+
+    @Test
     void login_shouldReturnTokensWhenCredentialsValid() {
         RegistrationRequest regRequest = defaultRegistrationRequest("loginUser", "USER", "pass");
         clientRestTemplate.postForEntity(baseUrl() + "/register", regRequest, UserResponse.class);

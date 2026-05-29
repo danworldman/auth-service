@@ -33,14 +33,16 @@ jobs:
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
 
-      - name: Build and Test with Coverage
-        run: ./gradlew build jacocoTestReport
+      - name: Compile and Test with Coverage
+        run: ./gradlew test jacocoTestReport
 
       - name: SonarQube analysis
-        if: env.SONAR_TOKEN != ''
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         run: ./gradlew sonar -Dsonar.projectKey=danworldman_auth-service -Dsonar.organization=danworldman -Dsonar.host.url=https://sonarcloud.io -Dsonar.token=$SONAR_TOKEN
+
+      - name: Assemble Release Artifact
+        run: ./gradlew bootJar
 
       - name: Build Docker image
         run: docker build -t auth-service:latest .
