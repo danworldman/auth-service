@@ -124,7 +124,7 @@ class RefreshTokenTest {
     void testDefaultConstructor() {
         RefreshToken token = new RefreshToken();
 
-        assertThat(token.getToken()).isNotNull();
+        assertThat(token.getToken()).isNull();
         assertThat(token.isRevoked()).isFalse();
         assertThat(token.getId()).isNull();
         assertThat(token.getExpiryDate()).isNull();

@@ -19,6 +19,10 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+/**
+ * REST controller for authentication operations.
+ * Provides endpoints for user registration, authentication, token refresh, validation, and rollback.
+ */
 @RestController
 @RequestMapping("/api/v1/auth")
 @RequiredArgsConstructor
@@ -26,26 +30,56 @@ public class AuthController {
 
     private final AuthService authService;
 
+    /**
+     * Registers new user credentials linked to an existing user profile in User Service.
+     *
+     * @param request registration data (userServiceId, username, role, password)
+     * @return created user credentials response
+     */
     @PostMapping("/register")
-    public ResponseEntity<UserResponse> register(@Valid @RequestBody RegistrationRequest request) {
+    public ResponseEntity<UserResponse> registration(@Valid @RequestBody RegistrationRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED).body(authService.registration(request));
     }
 
+    /**
+     * Authenticates a user and issues JWT access and refresh tokens.
+     *
+     * @param request login credentials (username, password)
+     * @return pair of access and refresh tokens
+     */
     @PostMapping("/login")
-    public ResponseEntity<TokenResponse> login(@Valid @RequestBody AuthenticationRequest request) {
+    public ResponseEntity<TokenResponse> authentication(@Valid @RequestBody AuthenticationRequest request) {
         return ResponseEntity.ok(authService.authentication(request));
     }
 
+    /**
+     * Refreshes an expired access token using a valid refresh token.
+     *
+     * @param request refresh token
+     * @return new access token and the same refresh token
+     */
     @PostMapping("/refresh")
     public ResponseEntity<TokenResponse> refresh(@Valid @RequestBody RefreshTokenRequest request) {
         return ResponseEntity.ok(authService.refreshToken(request));
     }
 
+    /**
+     * Validates a JWT token and returns user ID and role extracted from its claims.
+     *
+     * @param request token to validate
+     * @return user ID and role, or null values if token is invalid
+     */
     @PostMapping("/validate")
     public ResponseEntity<ValidateResponse> validate(@Valid @RequestBody ValidateTokenRequest request) {
         return ResponseEntity.ok(authService.validateToken(request));
     }
 
+    /**
+     * Deletes credentials associated with the given user service ID (rollback operation).
+     *
+     * @param userServiceId ID of the user in User Service
+     * @return no content response
+     */
     @DeleteMapping("/rollback/{userServiceId}")
     public ResponseEntity<Void> rollback(@PathVariable Long userServiceId) {
         authService.rollbackCredentials(userServiceId);

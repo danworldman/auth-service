@@ -17,6 +17,7 @@ import com.innowise.authservice.model.entity.UserCredential;
 import com.innowise.authservice.security.JwtUtil;
 import com.innowise.authservice.service.impl.AuthServiceImpl;
 import jakarta.persistence.EntityNotFoundException;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -32,6 +33,7 @@ import org.springframework.security.core.userdetails.User;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.test.util.ReflectionTestUtils;
 
 import java.time.LocalDateTime;
 import java.util.Collections;
@@ -78,6 +80,11 @@ class AuthServiceImplTest {
 
     @InjectMocks
     private AuthServiceImpl authService;
+
+    @BeforeEach
+    void setUp() {
+        ReflectionTestUtils.setField(authService, "refreshExpirationMillis", 604800000L);
+    }
 
     @Test
     void registration_shouldReturnUserResponse_whenValid() {
@@ -318,13 +325,10 @@ class AuthServiceImplTest {
     @Test
     void validateToken_shouldReturnResponse_whenTokenValid() {
         ValidateTokenRequest request = validateTokenRequest("jwt");
-        UserCredential user = new UserCredential();
-        user.setUserServiceId(USER_SERVICE_ID);
 
         when(jwtUtil.validateToken("jwt")).thenReturn(true);
-        when(jwtUtil.extractUsername("jwt")).thenReturn("Bob");
+        when(jwtUtil.extractUserId("jwt")).thenReturn(USER_SERVICE_ID);
         when(jwtUtil.extractRole("jwt")).thenReturn("USER");
-        when(userCredentialDAO.findByUsername("Bob")).thenReturn(Optional.of(user));
 
         ValidateResponse response = authService.validateToken(request);
 

@@ -17,7 +17,6 @@ import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import java.time.LocalDateTime;
 import java.util.Objects;
-import java.util.UUID;
 
 @Entity
 @Table(name = "refresh_tokens")
@@ -27,7 +26,6 @@ import java.util.UUID;
 public class RefreshToken {
 
     public RefreshToken() {
-        this.token = UUID.randomUUID().toString();
         this.isRevoked = false;
     }
 

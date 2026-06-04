@@ -17,9 +17,11 @@ import com.innowise.authservice.model.entity.UserCredential;
 import com.innowise.authservice.security.JwtUtil;
 import com.innowise.authservice.service.AuthService;
 import java.time.LocalDateTime;
+import java.time.temporal.ChronoUnit;
 
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
@@ -42,6 +44,9 @@ public class AuthServiceImpl implements AuthService {
     private final AuthenticationManager authenticationManager;
     private final UserDetailsService userDetailsService;
     private final UserCredentialMapper userCredentialMapper;
+
+    @Value("${jwt.refresh-expiration}")
+    private Long refreshExpirationMillis;
 
     @Override
     @Transactional
@@ -92,7 +97,7 @@ public class AuthServiceImpl implements AuthService {
         RefreshToken refreshTokenEntity = new RefreshToken();
         refreshTokenEntity.setToken(refreshTokenStr);
         refreshTokenEntity.setUserCredential(user);
-        refreshTokenEntity.setExpiryDate(LocalDateTime.now().plusDays(7));
+        refreshTokenEntity.setExpiryDate(LocalDateTime.now().plus(refreshExpirationMillis, ChronoUnit.MILLIS));
         refreshTokenEntity.setRevoked(false);
         refreshTokenDAO.save(refreshTokenEntity);
 
@@ -121,16 +126,11 @@ public class AuthServiceImpl implements AuthService {
     @Transactional(readOnly = true)
     public ValidateResponse validateToken(ValidateTokenRequest accessToken) {
         String token = accessToken.token();
-
         if (jwtUtil.validateToken(token)) {
-            String username = jwtUtil.extractUsername(token);
+            Long userId = jwtUtil.extractUserId(token);
             String role = jwtUtil.extractRole(token);
-            UserCredential user = userCredentialDAO.findByUsername(username).orElse(null);
-            Long userServiceId = (user != null) ? user.getUserServiceId() : null;
-
-            return new ValidateResponse(userServiceId, role);
+            return new ValidateResponse(userId, role);
         }
-
         return new ValidateResponse(null, null);
     }
 }

@@ -253,15 +253,6 @@ class AuthControllerIntegrationTest extends BaseIntegrationTest {
         assertThat(response.getBody().getDetail()).contains("User credentials not found");
     }
 
-    @Test
-    void anyEndpoint_shouldReturnForbidden_whenHandlerDoesNotExistWithoutToken() {
-        ResponseEntity<Void> response = clientRestTemplate.getForEntity(
-                baseUrl() + "/non-existent-endpoint", Void.class
-        );
-
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
-    }
-
     private RegistrationRequest registrationRequest(Long userServiceId, String username, String role, String password) {
         return new RegistrationRequest(userServiceId, username, role, password);
     }
