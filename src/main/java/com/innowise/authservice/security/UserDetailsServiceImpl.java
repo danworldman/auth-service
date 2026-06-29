@@ -19,13 +19,13 @@ public class UserDetailsServiceImpl implements UserDetailsService {
 
     @Override
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
-        UserCredential user = userCredentialDAO.findByUsername(username)
+        UserCredential userCredential  = userCredentialDAO.findByUsername(username)
                 .orElseThrow(() -> new UsernameNotFoundException("User not found: " + username));
 
         return new User(
-                user.getUsername(),
-                user.getPasswordHash(),
-                Collections.singletonList(new SimpleGrantedAuthority("ROLE_" + user.getRole()))
+                userCredential .getUsername(),
+                userCredential .getPasswordHash(),
+                Collections.singletonList(new SimpleGrantedAuthority("ROLE_" + userCredential .getRole()))
         );
     }
 }

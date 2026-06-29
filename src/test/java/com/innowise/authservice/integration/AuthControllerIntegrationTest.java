@@ -33,7 +33,7 @@ class AuthControllerIntegrationTest extends BaseIntegrationTest {
         clientRestTemplate = new RestTemplate();
         clientRestTemplate.setErrorHandler(new DefaultResponseErrorHandler() {
             @Override
-            public boolean hasError(ClientHttpResponse response) {
+            public boolean hasError(ClientHttpResponse httpServletResponse) {
                 return false;
             }
         });
@@ -48,84 +48,83 @@ class AuthControllerIntegrationTest extends BaseIntegrationTest {
 
     @Test
     void register_shouldReturnCreatedUser() {
-        RegistrationRequest request = defaultRegistrationRequest("testUser", "USER", "pass");
-        ResponseEntity<UserResponse> response = clientRestTemplate.postForEntity(
-                baseUrl() + "/register", request, UserResponse.class
+        RegistrationRequest registrationRequest = defaultRegistrationRequest("testUser", "USER", "pass");
+        ResponseEntity<UserResponse> registrationResponse = clientRestTemplate.postForEntity(
+                baseUrl() + "/credentials", registrationRequest, UserResponse.class
         );
 
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CREATED);
-        assertThat(response.getBody()).isNotNull();
-        assertThat(response.getBody().username()).isEqualTo("testUser");
+        assertThat(registrationResponse.getStatusCode()).isEqualTo(HttpStatus.CREATED);
+        assertThat(registrationResponse.getBody()).isNotNull();
+        assertThat(registrationResponse.getBody().username()).isEqualTo("testUser");
     }
 
     @Test
     void register_shouldReturnConflictWhenUsernameExists() {
-        RegistrationRequest request = defaultRegistrationRequest("duplicate", "USER", "pass");
-        clientRestTemplate.postForEntity(baseUrl() + "/register", request, UserResponse.class);
+        RegistrationRequest registrationRequest = defaultRegistrationRequest("duplicate", "USER", "pass");
+        clientRestTemplate.postForEntity(baseUrl() + "/credentials", registrationRequest, UserResponse.class);
 
-        ResponseEntity<ProblemDetail> response = clientRestTemplate.postForEntity(
-                baseUrl() + "/register", request, ProblemDetail.class
+        ResponseEntity<ProblemDetail> conflictResponse = clientRestTemplate.postForEntity(
+                baseUrl() + "/credentials", registrationRequest, ProblemDetail.class
         );
 
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CONFLICT);
-        assertThat(response.getBody()).isNotNull();
+        assertThat(conflictResponse.getStatusCode()).isEqualTo(HttpStatus.CONFLICT);
+        assertThat(conflictResponse.getBody()).isNotNull();
     }
 
     @Test
     void register_shouldReturnBadRequest_whenUsernameIsEmpty() {
-        RegistrationRequest request = registrationRequest(100L, "", "USER", "pass");
+        RegistrationRequest registrationRequest = registrationRequest(100L, "", "USER", "pass");
 
-        ResponseEntity<ProblemDetail> response = clientRestTemplate.postForEntity(
-                baseUrl() + "/register", request, ProblemDetail.class
+        ResponseEntity<ProblemDetail> badRequestResponse = clientRestTemplate.postForEntity(
+                baseUrl() + "/credentials", registrationRequest, ProblemDetail.class
         );
 
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+        assertThat(badRequestResponse.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
     }
 
     @Test
     void register_shouldReturnBadRequest_whenRoleIsInvalid() {
-        Map<String, String> invalidRequest = Map.of(
+        Map<String, String> invalidPayloadRequest = Map.of(
                 "userServiceId", "200",
                 "username", "validUser",
                 "role", "INVALID_ROLE",
                 "password", "pass"
         );
 
-        ResponseEntity<ProblemDetail> response = clientRestTemplate.postForEntity(
-                baseUrl() + "/register", invalidRequest, ProblemDetail.class
+        ResponseEntity<ProblemDetail> badRequestResponse = clientRestTemplate.postForEntity(
+                baseUrl() + "/credentials", invalidPayloadRequest, ProblemDetail.class
         );
 
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
-        assertThat(response.getBody()).isNotNull();
-        assertThat(response.getBody().getDetail()).contains("Validation failed");
+        assertThat(badRequestResponse.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+        assertThat(badRequestResponse.getBody()).isNotNull();
+        assertThat(badRequestResponse.getBody().getDetail()).contains("Validation failed");
     }
 
     @Test
     void register_shouldReturnBadRequest_whenUnexpectedDeserializationExceptionOccurs() {
-        Map<String, Object> corruptedPayload = Map.of(
+        Map<String, Object> corruptedPayloadRequest = Map.of(
                 "userServiceId", "not-a-number-causes-error",
                 "username", "user",
                 "role", "USER",
                 "password", "pass"
         );
 
-        ResponseEntity<ProblemDetail> response = clientRestTemplate.postForEntity(
-                baseUrl() + "/register", corruptedPayload, ProblemDetail.class
+        ResponseEntity<ProblemDetail> badRequestResponse = clientRestTemplate.postForEntity(
+                baseUrl() + "/credentials", corruptedPayloadRequest, ProblemDetail.class
         );
 
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
-        assertThat(response.getBody()).isNotNull();
+        assertThat(badRequestResponse.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+        assertThat(badRequestResponse.getBody()).isNotNull();
     }
-
 
     @Test
     void login_shouldReturnTokensWhenCredentialsValid() {
-        RegistrationRequest regRequest = defaultRegistrationRequest("loginUser", "USER", "pass");
-        clientRestTemplate.postForEntity(baseUrl() + "/register", regRequest, UserResponse.class);
+        RegistrationRequest registrationRequest = defaultRegistrationRequest("loginUser", "USER", "pass");
+        clientRestTemplate.postForEntity(baseUrl() + "/credentials", registrationRequest, UserResponse.class);
 
-        Map<String, String> loginRequest = loginRequest("loginUser", "pass");
+        Map<String, String> loginPayloadRequest = loginRequest("loginUser", "pass");
         ResponseEntity<TokenResponse> loginResponse = clientRestTemplate.postForEntity(
-                baseUrl() + "/login", loginRequest, TokenResponse.class
+                baseUrl() + "/login", loginPayloadRequest, TokenResponse.class
         );
 
         assertThat(loginResponse.getStatusCode()).isEqualTo(HttpStatus.OK);
@@ -136,31 +135,31 @@ class AuthControllerIntegrationTest extends BaseIntegrationTest {
 
     @Test
     void login_shouldReturnUnauthorizedWhenInvalidCredentials() {
-        RegistrationRequest regRequest = defaultRegistrationRequest("wrongPassUser", "USER", "correct");
-        clientRestTemplate.postForEntity(baseUrl() + "/register", regRequest, UserResponse.class);
+        RegistrationRequest registrationRequest = defaultRegistrationRequest("wrongPassUser", "USER", "correct");
+        clientRestTemplate.postForEntity(baseUrl() + "/credentials", registrationRequest, UserResponse.class);
 
-        Map<String, String> loginRequest = loginRequest("wrongPassUser", "incorrect");
-        ResponseEntity<ProblemDetail> response = clientRestTemplate.postForEntity(
-                baseUrl() + "/login", loginRequest, ProblemDetail.class
+        Map<String, String> loginPayloadRequest = loginRequest("wrongPassUser", "incorrect");
+        ResponseEntity<ProblemDetail> unauthorizedResponse = clientRestTemplate.postForEntity(
+                baseUrl() + "/login", loginPayloadRequest, ProblemDetail.class
         );
 
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
+        assertThat(unauthorizedResponse.getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
     }
 
     @Test
     void validate_shouldReturnUserIdAndRoleForValidToken() {
-        RegistrationRequest regRequest = defaultRegistrationRequest("validateUser", "ADMIN", "pass");
-        clientRestTemplate.postForEntity(baseUrl() + "/register", regRequest, UserResponse.class);
+        RegistrationRequest registrationRequest = defaultRegistrationRequest("validateUser", "ADMIN", "pass");
+        clientRestTemplate.postForEntity(baseUrl() + "/credentials", registrationRequest, UserResponse.class);
 
-        Map<String, String> loginRequest = loginRequest("validateUser", "pass");
-        TokenResponse tokens = clientRestTemplate.postForEntity(
-                baseUrl() + "/login", loginRequest, TokenResponse.class
+        Map<String, String> loginPayloadRequest = loginRequest("validateUser", "pass");
+        TokenResponse tokenResponse = clientRestTemplate.postForEntity(
+                baseUrl() + "/login", loginPayloadRequest, TokenResponse.class
         ).getBody();
 
-        assertNotNull(tokens);
-        Map<String, String> validateRequest = tokenRequest(tokens.accessToken());
+        assertNotNull(tokenResponse);
+        Map<String, String> validatePayloadRequest = tokenRequest(tokenResponse.accessToken());
         ResponseEntity<ValidateResponse> validateResponse = clientRestTemplate.postForEntity(
-                baseUrl() + "/validate", validateRequest, ValidateResponse.class
+                baseUrl() + "/validate", validatePayloadRequest, ValidateResponse.class
         );
 
         assertThat(validateResponse.getStatusCode()).isEqualTo(HttpStatus.OK);
@@ -171,69 +170,69 @@ class AuthControllerIntegrationTest extends BaseIntegrationTest {
 
     @Test
     void validate_shouldReturnNullForInvalidToken() {
-        Map<String, String> validateRequest = tokenRequest("invalid.token.value");
-        ResponseEntity<ValidateResponse> response = clientRestTemplate.postForEntity(
-                baseUrl() + "/validate", validateRequest, ValidateResponse.class
+        Map<String, String> validatePayloadRequest = tokenRequest("invalid.token.value");
+        ResponseEntity<ValidateResponse> validateResponse = clientRestTemplate.postForEntity(
+                baseUrl() + "/validate", validatePayloadRequest, ValidateResponse.class
         );
 
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
-        assertThat(response.getBody()).isNotNull();
-        assertThat(response.getBody().userId()).isNull();
-        assertThat(response.getBody().role()).isNull();
+        assertThat(validateResponse.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(validateResponse.getBody()).isNotNull();
+        assertThat(validateResponse.getBody().userId()).isNull();
+        assertThat(validateResponse.getBody().role()).isNull();
     }
 
     @Test
     void refresh_shouldReturnNewAccessToken() {
-        RegistrationRequest regRequest = defaultRegistrationRequest("refreshUser", "USER", "pass");
-        clientRestTemplate.postForEntity(baseUrl() + "/register", regRequest, UserResponse.class);
+        RegistrationRequest registrationRequest = defaultRegistrationRequest("refreshUser", "USER", "pass");
+        clientRestTemplate.postForEntity(baseUrl() + "/credentials", registrationRequest, UserResponse.class);
 
-        Map<String, String> loginRequest = loginRequest("refreshUser", "pass");
-        TokenResponse tokens = clientRestTemplate.postForEntity(
-                baseUrl() + "/login", loginRequest, TokenResponse.class
+        Map<String, String> loginPayloadRequest = loginRequest("refreshUser", "pass");
+        TokenResponse tokenResponse = clientRestTemplate.postForEntity(
+                baseUrl() + "/login", loginPayloadRequest, TokenResponse.class
         ).getBody();
 
-        assertNotNull(tokens);
-        Map<String, String> refreshRequest = refreshRequest(tokens.refreshToken());
+        assertNotNull(tokenResponse);
+        Map<String, String> refreshPayloadRequest = refreshRequest(tokenResponse.refreshToken());
         ResponseEntity<TokenResponse> refreshResponse = clientRestTemplate.postForEntity(
-                baseUrl() + "/refresh", refreshRequest, TokenResponse.class
+                baseUrl() + "/refresh", refreshPayloadRequest, TokenResponse.class
         );
 
         assertThat(refreshResponse.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(refreshResponse.getBody()).isNotNull();
         assertThat(refreshResponse.getBody().accessToken()).isNotBlank();
-        assertThat(refreshResponse.getBody().refreshToken()).isEqualTo(tokens.refreshToken());
+        assertThat(refreshResponse.getBody().refreshToken()).isEqualTo(tokenResponse.refreshToken());
     }
 
     @Test
     void refresh_shouldReturnUnauthorizedWhenTokenInvalid() {
-        Map<String, String> refreshRequest = refreshRequest("invalid.refresh.token");
-        ResponseEntity<ProblemDetail> response = clientRestTemplate.postForEntity(
-                baseUrl() + "/refresh", refreshRequest, ProblemDetail.class
+        Map<String, String> refreshPayloadRequest = refreshRequest("invalid.refresh.token");
+        ResponseEntity<ProblemDetail> unauthorizedResponse = clientRestTemplate.postForEntity(
+                baseUrl() + "/refresh", refreshPayloadRequest, ProblemDetail.class
         );
 
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
-        if (response.getBody() != null) {
-            assertThat(response.getBody().getDetail()).contains("Invalid refresh token");
+        assertThat(unauthorizedResponse.getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
+        if (unauthorizedResponse.getBody() != null) {
+            assertThat(unauthorizedResponse.getBody().getDetail()).contains("Invalid refresh token");
         }
     }
 
     @Test
     void rollback_shouldDeleteCredentialsSuccessfully() {
-        RegistrationRequest regRequest = registrationRequest(150L, "rollbackUser", "USER", "pass");
-        clientRestTemplate.postForEntity(baseUrl() + "/register", regRequest, UserResponse.class);
+        RegistrationRequest registrationRequest = registrationRequest(150L, "rollbackUser", "USER", "pass");
+        clientRestTemplate.postForEntity(baseUrl() + "/credentials", registrationRequest, UserResponse.class);
 
-        ResponseEntity<Void> response = clientRestTemplate.exchange(
+        ResponseEntity<Void> rollbackResponse = clientRestTemplate.exchange(
                 baseUrl() + "/rollback/150",
                 HttpMethod.DELETE,
                 null,
                 Void.class
         );
 
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NO_CONTENT);
+        assertThat(rollbackResponse.getStatusCode()).isEqualTo(HttpStatus.NO_CONTENT);
 
-        Map<String, String> loginRequest = loginRequest("rollbackUser", "pass");
+        Map<String, String> loginPayloadRequest = loginRequest("rollbackUser", "pass");
         ResponseEntity<ProblemDetail> loginResponse = clientRestTemplate.postForEntity(
-                baseUrl() + "/login", loginRequest, ProblemDetail.class
+                baseUrl() + "/login", loginPayloadRequest, ProblemDetail.class
         );
 
         assertThat(loginResponse.getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
@@ -241,16 +240,16 @@ class AuthControllerIntegrationTest extends BaseIntegrationTest {
 
     @Test
     void rollback_shouldReturnNotFoundWhenUserDoesNotExist() {
-        ResponseEntity<ProblemDetail> response = clientRestTemplate.exchange(
+        ResponseEntity<ProblemDetail> notFoundResponse = clientRestTemplate.exchange(
                 baseUrl() + "/rollback/999",
                 HttpMethod.DELETE,
                 null,
                 ProblemDetail.class
         );
 
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
-        assertThat(response.getBody()).isNotNull();
-        assertThat(response.getBody().getDetail()).contains("User credentials not found");
+        assertThat(notFoundResponse.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
+        assertThat(notFoundResponse.getBody()).isNotNull();
+        assertThat(notFoundResponse.getBody().getDetail()).contains("User credentials not found");
     }
 
     private RegistrationRequest registrationRequest(Long userServiceId, String username, String role, String password) {

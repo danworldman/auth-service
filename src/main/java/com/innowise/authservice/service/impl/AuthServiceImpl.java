@@ -18,7 +18,6 @@ import com.innowise.authservice.security.JwtUtil;
 import com.innowise.authservice.service.AuthService;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
-
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
@@ -29,6 +28,7 @@ import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -50,86 +50,88 @@ public class AuthServiceImpl implements AuthService {
 
     @Override
     @Transactional
-    public UserResponse registration(RegistrationRequest request) {
-        if (userCredentialDAO.findByUsername(request.username()).isPresent()) {
-            throw new UsernameAlreadyExistsException("Username already exists: " + request.username());
+    public UserResponse registration(RegistrationRequest registrationRequest) {
+        if (userCredentialDAO.findByUsername(registrationRequest.username()).isPresent()) {
+            throw new UsernameAlreadyExistsException("Username already exists: " + registrationRequest.username());
         }
 
-        UserCredential user = userCredentialMapper.toEntity(request);
-        user.setPasswordHash(passwordEncoder.encode(request.password()));
+        UserCredential userCredential = userCredentialMapper.toEntity(registrationRequest);
+        userCredential.setPasswordHash(passwordEncoder.encode(registrationRequest.password()));
 
-        UserCredential savedUser = userCredentialDAO.save(user);
-        return userCredentialMapper.toResponse(savedUser);
+        UserCredential savedUserCredential = userCredentialDAO.save(userCredential);
+        return userCredentialMapper.toResponse(savedUserCredential);
     }
 
     @Override
     @Transactional
     public void rollbackCredentials(Long userServiceId) {
-        UserCredential credential = userCredentialDAO.findByUserServiceId(userServiceId)
+        UserCredential userCredential = userCredentialDAO.findByUserServiceId(userServiceId)
                 .orElseThrow(() -> new EntityNotFoundException("User credentials not found for ID: " + userServiceId));
-        userCredentialDAO.delete(credential);
+        userCredentialDAO.delete(userCredential);
     }
 
     @Override
     @Transactional
-    public TokenResponse authentication(AuthenticationRequest request) {
+    public TokenResponse authentication(AuthenticationRequest authenticationRequest) {
         Authentication authentication = authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(request.username(), request.password())
+                new UsernamePasswordAuthenticationToken(authenticationRequest.username(), authenticationRequest.password())
         );
 
         SecurityContextHolder.getContext().setAuthentication(authentication);
 
-        UserCredential user = userCredentialDAO.findByUsername(request.username())
-                .orElseThrow(() -> new RuntimeException("User not found"));
+        UserCredential userCredential = userCredentialDAO.findByUsername(authenticationRequest.username())
+                .orElseThrow(() -> new UsernameNotFoundException("User not found with username: " + authenticationRequest.username()));
 
-        UserDetails userDetails = userDetailsService.loadUserByUsername(request.username());
+        UserDetails userDetails = userDetailsService.loadUserByUsername(authenticationRequest.username());
 
-        String role = userDetails.getAuthorities()
+        String securityRole = userDetails.getAuthorities()
                 .stream()
                 .findFirst()
                 .map(GrantedAuthority::getAuthority)
-                .map(auth -> auth.replace("ROLE_", ""))
-                .orElseThrow(() -> new RuntimeException("User has no authorities"));
+                .map(authority -> authority.replace("ROLE_", ""))
+                .orElseThrow(() -> new org.springframework.security.authentication.InsufficientAuthenticationException("User has no authorities"));
 
-        String accessToken = jwtUtil.generateAccessToken(userDetails, user.getUserServiceId(), role);
-        String refreshTokenStr = jwtUtil.generateRefreshToken(userDetails.getUsername());
+        String accessToken = jwtUtil.generateAccessToken(userDetails, userCredential.getUserServiceId(), securityRole);
+        String generatedRefreshToken = java.util.UUID.randomUUID().toString();
 
         RefreshToken refreshTokenEntity = new RefreshToken();
-        refreshTokenEntity.setToken(refreshTokenStr);
-        refreshTokenEntity.setUserCredential(user);
+        refreshTokenEntity.setToken(generatedRefreshToken);
+        refreshTokenEntity.setUserCredential(userCredential);
         refreshTokenEntity.setExpiryDate(LocalDateTime.now().plus(refreshExpirationMillis, ChronoUnit.MILLIS));
         refreshTokenEntity.setRevoked(false);
         refreshTokenDAO.save(refreshTokenEntity);
 
-        return new TokenResponse(accessToken, refreshTokenStr);
+        return new TokenResponse(accessToken, generatedRefreshToken);
     }
 
     @Override
     @Transactional
-    public TokenResponse refreshToken(RefreshTokenRequest refreshToken) {
-        String token = refreshToken.refreshToken();
-        RefreshToken storedToken = refreshTokenDAO.findByToken(token)
+    public TokenResponse refreshToken(RefreshTokenRequest refreshTokenRequest) {
+        String refreshTokenValue = refreshTokenRequest.refreshToken();
+        RefreshToken storedRefreshToken = refreshTokenDAO.findByToken(refreshTokenValue)
                 .orElseThrow(() -> new InvalidRefreshTokenException("Invalid refresh token"));
 
-        if (storedToken.isRevoked() || storedToken.getExpiryDate().isBefore(LocalDateTime.now())) {
+        if (storedRefreshToken.isRevoked() || storedRefreshToken.getExpiryDate().isBefore(LocalDateTime.now())) {
             throw new InvalidRefreshTokenException("Refresh token expired or revoked");
         }
 
-        UserCredential user = storedToken.getUserCredential();
-        UserDetails userDetails = userDetailsService.loadUserByUsername(user.getUsername());
-        String newAccessToken = jwtUtil.generateAccessToken(userDetails, user.getUserServiceId(), user.getRole());
+        UserCredential userCredential = storedRefreshToken.getUserCredential();
+        UserDetails userDetails = userDetailsService.loadUserByUsername(userCredential.getUsername());
 
-        return new TokenResponse(newAccessToken, token);
+        String cleanSecurityRole = userCredential.getRole().replace("ROLE_", "");
+        String newAccessToken = jwtUtil.generateAccessToken(userDetails, userCredential.getUserServiceId(), cleanSecurityRole);
+
+        return new TokenResponse(newAccessToken, refreshTokenValue);
     }
 
     @Override
     @Transactional(readOnly = true)
-    public ValidateResponse validateToken(ValidateTokenRequest accessToken) {
-        String token = accessToken.token();
-        if (jwtUtil.validateToken(token)) {
-            Long userId = jwtUtil.extractUserId(token);
-            String role = jwtUtil.extractRole(token);
-            return new ValidateResponse(userId, role);
+    public ValidateResponse validateToken(ValidateTokenRequest validateTokenRequest) {
+        String jsonWebToken = validateTokenRequest.token();
+        if (jwtUtil.validateToken(jsonWebToken)) {
+            Long userId = jwtUtil.extractUserId(jsonWebToken);
+            String securityRole = jwtUtil.extractRole(jsonWebToken);
+            return new ValidateResponse(userId, securityRole);
         }
         return new ValidateResponse(null, null);
     }

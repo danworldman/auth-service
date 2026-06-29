@@ -164,9 +164,9 @@ class AuthServiceImplTest {
 
     @Test
     void authentication_shouldReturnTokenResponse_whenCredentialsValid() {
-        AuthenticationRequest request = authenticationRequest("Bob", "password");
+        AuthenticationRequest authenticationRequest = authenticationRequest("Bob", "password");
         Authentication authentication = mock(Authentication.class);
-        UserCredential user = userCredential(3L, "Bob", "USER", "encPass",
+        UserCredential userCredential = userCredential(3L, "Bob", "USER", "encPass",
                 true, USER_SERVICE_ID
         );
 
@@ -175,16 +175,16 @@ class AuthServiceImplTest {
         );
 
         when(authenticationManager.authenticate(any(UsernamePasswordAuthenticationToken.class))).thenReturn(authentication);
-        when(userCredentialDAO.findByUsername("Bob")).thenReturn(Optional.of(user));
+        when(userCredentialDAO.findByUsername("Bob")).thenReturn(Optional.of(userCredential));
         when(userDetailsService.loadUserByUsername("Bob")).thenReturn(userDetails);
         when(jwtUtil.generateAccessToken(eq(userDetails), eq(USER_SERVICE_ID), eq("USER"))).thenReturn("access");
-        when(jwtUtil.generateRefreshToken("Bob")).thenReturn("refresh");
 
-        TokenResponse response = authService.authentication(request);
+        TokenResponse tokenResponse = authService.authentication(authenticationRequest);
 
-        assertNotNull(response);
-        assertEquals("access", response.accessToken());
-        assertEquals("refresh", response.refreshToken());
+        assertNotNull(tokenResponse);
+        assertEquals("access", tokenResponse.accessToken());
+        assertNotNull(tokenResponse.refreshToken());
+        assertEquals(36, tokenResponse.refreshToken().length());
         verify(refreshTokenDAO).save(any(RefreshToken.class));
     }
 
@@ -204,7 +204,6 @@ class AuthServiceImplTest {
         when(userCredentialDAO.findByUsername("inactiveUser")).thenReturn(Optional.of(user));
         when(userDetailsService.loadUserByUsername("inactiveUser")).thenReturn(userDetails);
         when(jwtUtil.generateAccessToken(eq(userDetails), eq(USER_SERVICE_ID), eq("USER"))).thenReturn("access");
-        when(jwtUtil.generateRefreshToken("inactiveUser")).thenReturn("refresh");
 
         TokenResponse response = authService.authentication(request);
 

@@ -7,3 +7,8 @@ spring:
   web:
     resources:
       add-mappings: false
+
+jwt:
+  secret: e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+  access-expiration: 900000
+  refresh-expiration: 604800000
