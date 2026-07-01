@@ -18,11 +18,12 @@ import com.innowise.authservice.security.JwtUtil;
 import com.innowise.authservice.service.AuthService;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
-import jakarta.persistence.EntityNotFoundException;
+import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.authentication.InsufficientAuthenticationException;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -65,9 +66,8 @@ public class AuthServiceImpl implements AuthService {
     @Override
     @Transactional
     public void rollbackCredentials(Long userServiceId) {
-        UserCredential userCredential = userCredentialDAO.findByUserServiceId(userServiceId)
-                .orElseThrow(() -> new EntityNotFoundException("User credentials not found for ID: " + userServiceId));
-        userCredentialDAO.delete(userCredential);
+        userCredentialDAO.findByUserServiceId(userServiceId)
+                .ifPresent(userCredentialDAO::delete);
     }
 
     @Override
@@ -89,10 +89,10 @@ public class AuthServiceImpl implements AuthService {
                 .findFirst()
                 .map(GrantedAuthority::getAuthority)
                 .map(authority -> authority.replace("ROLE_", ""))
-                .orElseThrow(() -> new org.springframework.security.authentication.InsufficientAuthenticationException("User has no authorities"));
+                .orElseThrow(() -> new InsufficientAuthenticationException("User has no authorities"));
 
         String accessToken = jwtUtil.generateAccessToken(userDetails, userCredential.getUserServiceId(), securityRole);
-        String generatedRefreshToken = java.util.UUID.randomUUID().toString();
+        String generatedRefreshToken = UUID.randomUUID().toString();
 
         RefreshToken refreshTokenEntity = new RefreshToken();
         refreshTokenEntity.setToken(generatedRefreshToken);
