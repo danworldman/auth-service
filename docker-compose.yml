@@ -11,6 +11,11 @@ services:
       - DB_HOST=db
       - DB_PORT=5432
       - DB_NAME=auth_db
+      - LOGGING_LEVEL_ORG_SPRINGFRAMEWORK_SECURITY=DEBUG
+      - LOGGING_LEVEL_ORG_SPRINGFRAMEWORK_WEB=DEBUG
+      - LOGGING_LEVEL_COM_INNOWISE_AUTHSERVICE=DEBUG
+      - SERVER_ERROR_INCLUDE_EXCEPTION=true
+      - SERVER_ERROR_INCLUDE_STACKTRACE=always
     depends_on:
       db:
         condition: service_healthy

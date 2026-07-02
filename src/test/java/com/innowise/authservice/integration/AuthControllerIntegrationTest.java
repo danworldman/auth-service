@@ -239,17 +239,15 @@ class AuthControllerIntegrationTest extends BaseIntegrationTest {
     }
 
     @Test
-    void rollback_shouldReturnNotFoundWhenUserDoesNotExist() {
-        ResponseEntity<ProblemDetail> notFoundResponse = clientRestTemplate.exchange(
+    void rollback_shouldReturnNoContentWhenUserDoesNotExist() {
+        ResponseEntity<Void> response = clientRestTemplate.exchange(
                 baseUrl() + "/rollback/999",
                 HttpMethod.DELETE,
                 null,
-                ProblemDetail.class
+                Void.class
         );
 
-        assertThat(notFoundResponse.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
-        assertThat(notFoundResponse.getBody()).isNotNull();
-        assertThat(notFoundResponse.getBody().getDetail()).contains("User credentials not found");
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NO_CONTENT);
     }
 
     private RegistrationRequest registrationRequest(Long userServiceId, String username, String role, String password) {

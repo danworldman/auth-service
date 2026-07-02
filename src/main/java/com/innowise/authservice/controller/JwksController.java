@@ -3,6 +3,7 @@ package com.innowise.authservice.controller;
 import com.innowise.authservice.security.JwtUtil;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RestController;
+
 import java.security.interfaces.RSAPublicKey;
 import java.util.Base64;
 import java.util.Collections;

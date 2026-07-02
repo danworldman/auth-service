@@ -51,16 +51,16 @@ public class RefreshToken {
     private UserCredential userCredential;
 
     @Override
-    public boolean equals(Object o) {
-        if (this == o) {
+    public boolean equals(Object object) {
+        if (this == object) {
             return true;
         }
 
-        if (o == null || getClass() != o.getClass()) {
+        if (object == null || getClass() != object.getClass()) {
             return false;
         }
 
-        RefreshToken refreshToken = (RefreshToken) o;
+        RefreshToken refreshToken = (RefreshToken) object;
 
         if (getToken() == null || refreshToken.getToken() == null) {
             return false;

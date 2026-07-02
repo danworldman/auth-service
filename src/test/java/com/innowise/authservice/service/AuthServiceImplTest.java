@@ -16,7 +16,6 @@ import com.innowise.authservice.model.entity.RefreshToken;
 import com.innowise.authservice.model.entity.UserCredential;
 import com.innowise.authservice.security.JwtUtil;
 import com.innowise.authservice.service.impl.AuthServiceImpl;
-import jakarta.persistence.EntityNotFoundException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -39,6 +38,7 @@ import java.time.LocalDateTime;
 import java.util.Collections;
 import java.util.Optional;
 
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -154,10 +154,10 @@ class AuthServiceImplTest {
     }
 
     @Test
-    void rollbackCredentials_shouldThrowEntityNotFoundException_whenUserDoesNotExist() {
+    void rollbackCredentials_shouldDoNothing_whenUserDoesNotExist() {
         when(userCredentialDAO.findByUserServiceId(USER_SERVICE_ID)).thenReturn(Optional.empty());
 
-        assertThrows(EntityNotFoundException.class, () -> authService.rollbackCredentials(USER_SERVICE_ID));
+        assertDoesNotThrow(() -> authService.rollbackCredentials(USER_SERVICE_ID));
 
         verify(userCredentialDAO, never()).delete(any());
     }
