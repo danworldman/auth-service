@@ -1,0 +1,19 @@
+spring:
+  application:
+    name: auth-service
+  jpa:
+    hibernate:
+      ddl-auto: none
+    open-in-view: false
+  liquibase:
+    change-log: classpath:db/changelog/db.changelog-master.yaml
+  profiles:
+    active: local
+
+server:
+  port: 8081
+
+jwt:
+  secret: ${JWT_SECRET:6lSuOkvcrmiHJ2Har3y6ebvZ4ZF1MYYAxcPEhMfCciF6LWhiHhOa5p0vzs17hLQM}
+  access-expiration: 900000
+  refresh-expiration: 604800000
